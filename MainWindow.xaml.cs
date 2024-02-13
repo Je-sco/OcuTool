@@ -10,157 +10,128 @@ namespace OcuTool
 
     public partial class MainWindow : Window
     {
-        const string DEBUG_KEY_PATH = "Software\\Oculus\\RemoteHeadset";
-        RegistryKey DebugKey = Registry.CurrentUser.OpenSubKey(DEBUG_KEY_PATH, true);
-
-        bool bitrateChangedByMe = true;
-        bool distortionChangedByMe = true;
+        RegistryItem codec = new RegistryItem("HEVC", "DWORD");
+        RegistryItem bitrate = new RegistryItem("BitrateMbps", "String");
+        RegistryItem localDimming = new RegistryItem("LocalDimming", "DWORD");
+        RegistryItem DistortionCurve = new RegistryItem("DistortionCurve", "DWORD");
 
         public MainWindow()
         {
             InitializeComponent();
-            getCurrentValues();
+
+            visualSetup();
         }
 
-        private void getCurrentValues()
+        private void visualSetup()  // Set all of the checkboxes to their state in the registry
         {
-            getBitrate();
-            getCodec();
-            getLocalDimming();
-            getDistortionCurvature();
-        }
+            limitCodecCheckbox();
+            limitDistortionCheckbox();
 
-        private void getBitrate()
-        {
-            if (DebugKey.GetValue("BitrateMbps") == null)
-            {
-                updateBitrateSlider(0);
-            }
-            else
-            {
-                updateBitrateSlider(Convert.ToInt32(DebugKey.GetValue("BitrateMbps")));
-            }
-        }
+            bitrateSlider.Value = bitrate.getRegistryValue();
 
-        private void getLocalDimming()
-        {
-            if (DebugKey.GetValue("LocalDimming") == null || Convert.ToInt32(DebugKey.GetValue("LocalDimming")) == 1)
+            if (localDimming.getRegistryValue() == 1)
             {
                 localDimmingCheckbox.IsChecked = true;
             }
-            else
-            {
-                localDimmingCheckbox.IsChecked = false;
-            }
-
         }
-
-        private void getDistortionCurvature()
+        
+        private void limitCodecCheckbox() // Limit the codec checkboxes to only one field, so only one of them can be checked at a time.
         {
-            if (DebugKey.GetValue("DistortionCurve") == null || Convert.ToInt32(DebugKey.GetValue("DistortionCurve")) == 1) // If Distortion Curve is set to High or default
-            {
-                highDistortion.IsChecked = true;
-            }
-            else   // If low distortion curve
-            {
-                lowDistortion.IsChecked = true;
-            }
-        }
+            int codecValue = codec.getRegistryValue();
 
-        private void getCodec()
-        {
-            if (DebugKey.GetValue("HEVC") == null)
-            {
-                autoCodecCheckbox.IsChecked = true;
-            }
-            else
-            {
-                int tempCodec = Convert.ToInt32(DebugKey.GetValue("HEVC"));
-                if (tempCodec == 0) // If Set to H264
+            switch (codecValue)
                 {
+                case -1:
+                    autoCodecCheckbox.IsChecked = true;
+                    H264checkbox.IsChecked = false;
+                    H265checkbox.IsChecked = false;
+
+                    bitrateSlider.Maximum = 1000;
+                    break;
+                case 0:
+                    autoCodecCheckbox.IsChecked = false;
                     H264checkbox.IsChecked = true;
-                }
-                else                // If set to H265
-                {
+                    H265checkbox.IsChecked = false;
+                   
+                    bitrateSlider.Maximum = 1000;
+                    break;
+                case 1:
+                    autoCodecCheckbox.IsChecked = false;
+                    H264checkbox.IsChecked = false;
                     H265checkbox.IsChecked = true;
-                }
+                    
+                    bitrateSlider.Maximum = 300;
+                    if (bitrate.getRegistryValue() > 300)
+                    {
+                        bitrate.setValue(300);
+                    }
+                    break;
+                } 
+        }
+        
+        private void limitDistortionCheckbox()
+        {
+            int distortionValue = DistortionCurve.getRegistryValue();
+            
+            switch (distortionValue)
+            {
+                case 0:
+                    lowDistortion.IsChecked = true;
+                    highDistortion.IsChecked = false;
+                    break;
+                case -1:
+                case 1:
+                    lowDistortion.IsChecked = false;
+                    highDistortion.IsChecked = true;
+                    break;
             }
         }
 
         private void autoCodecCheckbox_Checked(object sender, RoutedEventArgs e)
         {
-            H264checkbox.IsChecked = false;
-            H265checkbox.IsChecked = false;
-            bitrateSlider.Maximum = 960;
-            if (!(DebugKey.GetValue("HEVC") == null))
-            {
-                DebugKey.DeleteValue("HEVC");
-            }
+            codec.setValue(-1);
+            limitCodecCheckbox();
         }
 
         private void H264checkbox_Checked(object sender, RoutedEventArgs e)
         {
-            H265checkbox.IsChecked = false;
-            autoCodecCheckbox.IsChecked = false;
-            bitrateSlider.Maximum = 960;
-            DebugKey.SetValue("HEVC", 0);
+            codec.setValue(0);
+            limitCodecCheckbox();
         }
 
         private void H265checkbox_Checked(object sender, RoutedEventArgs e)
         {
-            H264checkbox.IsChecked = false;
-            autoCodecCheckbox.IsChecked = false;
-            bitrateSlider.Maximum = 200;
-            if (bitrateSlider.Value > 200)
-            {
-                updateBitrateSlider(200);
-                getBitrate();
-            }
-            DebugKey.SetValue("HEVC", 1);
-        }
-
-        private void updateBitrateSlider(int value)
-        {
-            bitrateChangedByMe = true;
-            bitrateSlider.Value = value;
-            bitrateChangedByMe = false;
+            codec.setValue(1);
+            limitCodecCheckbox();
         }
 
         private void bitrateSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)   
         {
-            if (!(bitrateChangedByMe))
-            {
-                DebugKey.SetValue("BitrateMbps", bitrateSlider.Value);
-                if (bitrateSlider.Value == 0)
-                {
-                    DebugKey.DeleteValue("BitrateMbps");
-                }
-            }
+            bitrate.setValue(Convert.ToInt32(bitrateSlider.Value));
         }
 
         private void localDimmingCheckbox_Clicked(object sender, RoutedEventArgs e)
         {
             if (localDimmingCheckbox.IsChecked == false)
             {
-                DebugKey.SetValue("LocalDimming", 0);
+                localDimming.setValue(0);
             }
             else
             {
-                DebugKey.SetValue("LocalDimming", 1);
+                localDimming.setValue(1);
             }
         }
 
         private void lowDistortion_Checked(object sender, RoutedEventArgs e)
         {
-            highDistortion.IsChecked = false;
-            DebugKey.SetValue("DistortionCurve", 0);
+            DistortionCurve.setValue(0);
+            limitDistortionCheckbox();
         }
 
         private void highDistortion_Checked(object sender, RoutedEventArgs e)
         {
-            lowDistortion.IsChecked = false;
-            DebugKey.SetValue("DistortionCurve", 1);
+            DistortionCurve.setValue(1);
+            limitDistortionCheckbox();
         }
-
     }
 }

@@ -98,7 +98,8 @@
         </Style>
     </Window.Resources>
     <Grid Margin="0,0,0,3">
-        <Slider x:Name="bitrateSlider" HorizontalAlignment="Left" Margin="18,183,0,0" VerticalAlignment="Top" Width="120" TickFrequency="10" IsSnapToTickEnabled="True" Maximum="960" ValueChanged="bitrateSlider_ValueChanged" />
+
+        <Slider x:Name="bitrateSlider" HorizontalAlignment="Left" Margin="18,183,0,0" VerticalAlignment="Top" Width="120" TickFrequency="10" IsSnapToTickEnabled="True" Maximum="960" ValueChanged="bitrateSlider_ValueChanged"/>
 
         <TextBox x:Name="bitrateTextbox" HorizontalAlignment="Left" Margin="143,184,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="43" Height="17" Text="{Binding ElementName=bitrateSlider, Path=Value}"/>
         <CheckBox Style="{DynamicResource CheckBoxStyle1}" x:Name="H264checkbox" Content="H264" HorizontalAlignment="Left" Margin="25,82,0,0" VerticalAlignment="Top" Height="19" Width="88" RenderTransformOrigin="0.5,0.5" FontSize="16" Checked="H264checkbox_Checked"/>
